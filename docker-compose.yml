@@ -7,11 +7,11 @@ services:
     image: bind9-docker-ddns
     container_name: bind9-docker-ddns
     environment:
-      trusted_cidrs: "192.168.73.0/24,192.168.74.0/24,192.168.75.0/24"
+      trusted_cidrs: "192.168.73.0/24,192.168.74.0/24,192.168.75.0/24,192.168.200.0/24"
       dns_forwarders: "9.9.9.9,1.1.1.1,8.8.8.8"
       zone: "docker.snigji.com"
+      reverse_zone: "168.192.in-addr.arpa"
       nameserver_hostname: "ns"
-      nameserver_email: "admin.snigji.com"
     ports:
       - "8053:53"
     volumes:
@@ -21,14 +21,21 @@ services:
       - bind_record:/var/lib/bind
 
   test1:
-    image: alpine:3
+    image: alpine
     container_name: test1
     labels:
-      com.snigji.bind9-docker-ddns.hostname: test1
-#      com.snigji.bind9-docker-ddns.record-type: CNAME
-#      com.snigji.bind9-docker-ddns.value: test2
-#      com.snigji.bind9-docker-ddns.network: bind9-docker-ddns
-    entrypoint: ["sleep", "1000"]
+      bind9-docker-ddns.docker.snigji.com.hostname: test1
+      bind9-docker-ddns.docker.snigji.com.record-type: CNAME
+      bind9-docker-ddns.docker.snigji.com.record-value: test2
+      bind9-docker-ddns.docker.snigji.com.docker-network: bind9-docker-ddns
+    entrypoint: ["sleep", "infinity"]
+
+  test2:
+    image: alpine
+    container_name: test2
+    labels:
+      bind9-docker-ddns.docker.snigji.com.hostname: test2
+    entrypoint: [ "sleep", "infinity" ]
 
 volumes:
   bind_home:
@@ -41,3 +48,9 @@ volumes:
 networks:
   default:
     name: bind9-docker-ddns
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: "192.168.200.0/24"
+          gateway: "192.168.200.1"

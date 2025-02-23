@@ -95,9 +95,9 @@ class Bind:
 
         init_file = Path(bind_home_directory, f'.{self.config.client_name}.init')
         if init_file.exists():
-            LOG.error("Already initialized")
-            raise Exception("Already initialized")
-            # TODO: ability to skip if initialized, make sure the new IP is same
+            LOG.error("Already initialized once, cleanup and start again")
+            raise Exception("Already initialized once, cleanup and start again")
+            # TODO: ability to skip if initialized, make sure the nameserver IP is same
             # tsig.key
             # with open(tsig_key_file, 'r') as f:
             #     tsig_key = f.read()
@@ -125,7 +125,7 @@ class Bind:
         zone_definition = zone_definition_template \
             .replace("$zone_name", self.config.zone) \
             .replace("$nameserver_hostname", self.config.nameserver_hostname)
-        zone_definition += str(DNSRecord("ns", "A", self.current_ip))
+        zone_definition += str(DNSRecord(self.config.zone, "ns", "A", self.current_ip))
         with open(Path(bind_home_directory, self.config.zone), 'w') as f:
             f.write(zone_definition)
 
@@ -139,8 +139,8 @@ class Bind:
                 f.write(reverse_zone_configuration)
 
             reverse_zone_definition = zone_definition_template \
-                .replace("$nameserver_fqdn", f'{self.config.nameserver_hostname}.{self.config.zone}') \
-                .replace("$nameserver_email", self.config.nameserver_email)
+                .replace("$zone_name", self.config.zone) \
+                .replace("$nameserver_hostname", self.config.nameserver_hostname)
             with open(Path(bind_home_directory, self.config.reverse_zone), 'w') as f:
                 f.write(reverse_zone_definition)
 
@@ -159,18 +159,20 @@ class Bind:
         return tsig_key
 
     def add(self, record: DNSRecord):
-        update = dns.update.Update(self.config.zone, keyring=self.keyring)
-        update.add(record.name, record.ttl, record.record_type, record.value)
-        update.add(record.name, record.ttl, "TXT", f'{self.config.client_name},{record.source}')
+        self._add(record)
+
+        arpa_record = self._arpa_record(record)
+        if arpa_record:
+            self._add(arpa_record)
+
+    def remove(self, zone, record_name):
+        LOG.info('removing record: %s, from zone: %s', record_name, zone)
+        update = dns.update.Update(zone, keyring=self.keyring)
+        update.delete(record_name)
         dns.query.tcp(update, self.current_ip, timeout=2)
 
-    def remove(self, hostname):
-        update = dns.update.Update(self.config.zone, keyring=self.keyring)
-        update.delete(hostname)
-        dns.query.tcp(update, self.current_ip, timeout=2)
-
-    def list_docker_records(self):
-        zone = dns.zone.from_xfr(dns.query.xfr(self.current_ip, self.config.zone))
+    def list_docker_records(self, zone_name):
+        zone = dns.zone.from_xfr(dns.query.xfr(self.current_ip, zone_name))
         managed_records = []
         docker_record = f'{self.config.client_name},{docker_source_id}'
         for name, node in zone.nodes.items():
@@ -180,3 +182,27 @@ class Bind:
                     if docker_record in values:
                         managed_records.append(str(name))
         return managed_records
+
+    def _add(self, record: DNSRecord):
+        LOG.info('Adding record: %s, to zone: %s', record, record.zone)
+        update = dns.update.Update(record.zone, keyring=self.keyring)
+        update.add(record.name, record.ttl, record.record_type, record.value)
+        update.add(record.name, record.ttl, "TXT", f'{self.config.client_name},{record.source}')
+        dns.query.tcp(update, self.current_ip, timeout=2)
+
+    def _arpa_record(self, record: DNSRecord):
+        if not self.config.reverse_zone:
+            return
+
+        if record.record_type != 'A':
+            return
+
+        ip_reverse = '.'.join(reversed(record.value.split('.')))
+        reverse_zone_ip_section = self.config.reverse_zone.removesuffix('.in-addr.arpa')
+        ip_reverse_prefix = ip_reverse.removesuffix(f'.{reverse_zone_ip_section}')
+
+        if ip_reverse == ip_reverse_prefix:
+            LOG.debug("IP doesn't belong to ARPA zone")
+            return None
+
+        return DNSRecord(self.config.reverse_zone, ip_reverse_prefix, 'PTR', f'{record.name}.{record.zone}.', ttl=record.ttl, source=record.source)

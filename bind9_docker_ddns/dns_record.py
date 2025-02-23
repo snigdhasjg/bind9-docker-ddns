@@ -1,10 +1,12 @@
 docker_source_id = "docker"
 static_source_id = "static"
 
+
 class DNSRecord:
     _template = "{name}     IN  {record_type}       {value} ; {source}"
 
-    def __init__(self, name, record_type, value, ttl=60, source=docker_source_id):
+    def __init__(self, zone, name, record_type, value, ttl=60, source=docker_source_id):
+        self.zone = zone
         self.name = name
         self.record_type = record_type
         self.value = value
