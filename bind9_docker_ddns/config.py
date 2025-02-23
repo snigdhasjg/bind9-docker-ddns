@@ -18,6 +18,5 @@ class Config:
         self.zone = envs["zone"]
         self.reverse_zone = envs.get("reverse_zone")
         self.nameserver_hostname = envs["nameserver_hostname"]
-        self.nameserver_email = envs["nameserver_email"]
         self.client_name = "bind9-docker-ddns"
 

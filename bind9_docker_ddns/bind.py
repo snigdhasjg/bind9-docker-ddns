@@ -44,7 +44,7 @@ zone "$zone_name" {
     file "$zones_directory/$zone_name";
 
     update-policy {
-        grant $client_name zonesub ANY;
+        grant * zonesub ANY;
     };
 };
 """
@@ -116,8 +116,7 @@ class Bind:
         # zone
         zone_configuration = zone_configuration_template \
             .replace("$zone_name", self.config.zone) \
-            .replace("$zones_directory", bind_home_directory.absolute().as_posix()) \
-            .replace("$client_name", self.config.client_name)
+            .replace("$zones_directory", bind_home_directory.absolute().as_posix())
 
         with open(Path(bind_home_directory, 'named.conf.local'), 'a+') as f:
             f.write(zone_configuration)
@@ -125,7 +124,7 @@ class Bind:
         zone_definition = zone_definition_template \
             .replace("$zone_name", self.config.zone) \
             .replace("$nameserver_hostname", self.config.nameserver_hostname)
-        zone_definition += str(DNSRecord(self.config.zone, "ns", "A", self.current_ip))
+        zone_definition += DNSRecord(self.config.zone, self.config.nameserver_hostname, "A", self.current_ip).bind_record()
         with open(Path(bind_home_directory, self.config.zone), 'w') as f:
             f.write(zone_definition)
 
@@ -133,8 +132,7 @@ class Bind:
         if self.config.reverse_zone:
             reverse_zone_configuration = zone_configuration_template \
                 .replace("$zone_name", self.config.reverse_zone) \
-                .replace("$zones_directory", bind_home_directory.absolute().as_posix()) \
-                .replace("$client_name", self.config.client_name)
+                .replace("$zones_directory", bind_home_directory.absolute().as_posix())
             with open(Path(bind_home_directory, 'named.conf.local'), 'a+') as f:
                 f.write(reverse_zone_configuration)
 
@@ -184,7 +182,7 @@ class Bind:
         return managed_records
 
     def _add(self, record: DNSRecord):
-        LOG.info('Adding record: %s, to zone: %s', record, record.zone)
+        LOG.info('Adding record: %s', record)
         update = dns.update.Update(record.zone, keyring=self.keyring)
         update.add(record.name, record.ttl, record.record_type, record.value)
         update.add(record.name, record.ttl, "TXT", f'{self.config.client_name},{record.source}')
