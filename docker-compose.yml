@@ -25,13 +25,14 @@ services:
           phone: A,192.168.73.104
           ipad: A,192.168.73.105
           m1: A,192.168.73.200
-    ports:
-      - "8053:53"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-#      - bind_home:/etc/bind
-#      - bind_cache:/var/cache/bind
-#      - bind_record:/var/lib/bind
+      - bind_home:/etc/bind
+      - bind_cache:/var/cache/bind
+      - bind_record:/var/lib/bind
+    networks:
+      default:
+        ipv4_address: 192.168.200.101
 
   test1:
     image: alpine

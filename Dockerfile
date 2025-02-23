@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir .
 COPY . .
 RUN pip install --no-cache-dir .
 
-WORKDIR /app
+WORKDIR /etc/bind
 RUN rm -rf /tmp/build
 
 ENTRYPOINT ["bind9-docker-ddns"]

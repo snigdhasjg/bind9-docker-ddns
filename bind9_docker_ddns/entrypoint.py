@@ -14,9 +14,8 @@ def main():
     bind = Bind(config)
     container = Container(config)
 
-    bind.add(DNSRecord(config.zone, "one", "A", "172.17.1.0", source=static_source_id))
-    bind.add(DNSRecord(config.zone, "two", "A", "172.17.2.0", source=static_source_id))
-    bind.add(DNSRecord(config.zone, "three", "A", "172.17.3.0", source=static_source_id))
+    for each_record in config.static_dns_records:
+        bind.add(each_record)
 
     while True:
         LOG.info('Managed DNS entries: %s', bind.list_docker_records(config.zone))

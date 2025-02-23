@@ -13,7 +13,8 @@ classifiers = [
 dependencies = [
     "dnspython==2.7.0",
     "docker==7.1.0",
-    "dotenv==0.9.9"
+    "dotenv==0.9.9",
+    "PyYAML==6.0.2"
 ]
 
 [tool.setuptools.packages.find]

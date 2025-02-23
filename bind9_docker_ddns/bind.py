@@ -95,13 +95,15 @@ class Bind:
 
         init_file = Path(bind_home_directory, f'.{self.config.client_name}.init')
         if init_file.exists():
-            LOG.error("Already initialized once, cleanup and start again")
-            raise Exception("Already initialized once, cleanup and start again")
-            # TODO: ability to skip if initialized, make sure the nameserver IP is same
+            with open(init_file, 'r') as f:
+                configured_ip = f.read()
+                if configured_ip != self.current_ip:
+                    LOG.error("IP changed, either use %s or clean all volume and restart the server", configured_ip)
+                    raise Exception("IP changed, please clean all volume and restart the server")
             # tsig.key
-            # with open(tsig_key_file, 'r') as f:
-            #     tsig_key = f.read()
-            #     return re.search(tsig_key_pattern, tsig_key).group(1)
+            with open(tsig_key_file, 'r') as f:
+                tsig_key = f.read()
+                return re.search(tsig_key_pattern, tsig_key).group(1)
 
         # config
         named_conf_options = config_template \
@@ -153,7 +155,8 @@ class Bind:
             f.write(tsig_key)
         tsig_key = re.search(tsig_key_pattern, tsig_key).group(1)
 
-        init_file.touch()
+        with open(init_file, 'w') as f:
+            f.write(self.current_ip)
         return tsig_key
 
     def add(self, record: DNSRecord):
