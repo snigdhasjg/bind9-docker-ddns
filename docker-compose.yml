@@ -1,0 +1,43 @@
+name: bind9-docker-ddns
+
+services:
+  bind9-docker-ddns:
+    build:
+      context: .
+    image: bind9-docker-ddns
+    container_name: bind9-docker-ddns
+    environment:
+      trusted_cidrs: "192.168.73.0/24,192.168.74.0/24,192.168.75.0/24"
+      dns_forwarders: "9.9.9.9,1.1.1.1,8.8.8.8"
+      zone: "docker.snigji.com"
+      nameserver_hostname: "ns"
+      nameserver_email: "admin.snigji.com"
+    ports:
+      - "8053:53"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - bind_home:/etc/bind
+      - bind_cache:/var/cache/bind
+      - bind_record:/var/lib/bind
+
+  test1:
+    image: alpine:3
+    container_name: test1
+    labels:
+      com.snigji.bind9-docker-ddns.hostname: test1
+#      com.snigji.bind9-docker-ddns.record-type: CNAME
+#      com.snigji.bind9-docker-ddns.value: test2
+#      com.snigji.bind9-docker-ddns.network: bind9-docker-ddns
+    entrypoint: ["sleep", "1000"]
+
+volumes:
+  bind_home:
+    name: bind_home
+  bind_cache:
+    name: bind_cache
+  bind_record:
+    name: bind_record
+
+networks:
+  default:
+    name: bind9-docker-ddns

@@ -1,0 +1,27 @@
+[project]
+name = "bind9-docker-ddns"
+version = "0.1"
+description = "Dynamic update of DNS of docker containers"
+readme = "README.md"
+requires-python = ">=3.12"
+keywords = ["dns", "ddns", "docker", "bind9"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "dnspython==2.7.0",
+    "docker==7.1.0",
+    "dotenv==0.9.9"
+]
+
+[tool.setuptools.packages.find]
+include = ["bind9_docker_ddns*"]
+
+[project.urls]
+homepage = "https://github.com/snigdhasjg/bind9-docker-ddns"
+repository = "https://github.com/snigdhasjg/bind9-docker-ddns"
+
+[project.scripts]
+bind9-docker-ddns = "bind9_docker_ddns.entrypoint:main"
