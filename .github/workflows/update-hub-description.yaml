@@ -1,0 +1,40 @@
+name: Docker Hub Description
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "README.md"
+      - "short_description.txt"
+      - ".github/workflows/update-hub-description.yaml"
+
+concurrency: update-hub-description
+
+jobs:
+  docker-hub:
+    runs-on: ubuntu-latest
+    name: Docker Hub Update
+    environment:
+      name: dockerhub
+      url: "https://hub.docker.com/repository/docker/${{ vars.DOCKERHUB_USERNAME }}/bind9-docker-ddns/general"
+    steps:
+      - name: Checkout 🔔
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - id: read_files
+        name: Read files
+        run: |
+          echo "short_description=$(cat short_description.txt)" >> $GITHUB_OUTPUT
+
+      - name: Description Update bind9-docker-ddns
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ vars.DOCKERHUB_USERNAME }}/bind9-docker-ddns
+          short-description: ${{ steps.read_files.outputs.short_description }}
+          readme-filepath: "README.md"

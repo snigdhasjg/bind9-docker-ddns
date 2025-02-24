@@ -7,6 +7,8 @@ on:
       - main
     paths-ignore:
       - "README.md"
+      - "short_description.txt"
+      - ".github/workflows/update-hub-description.yaml"
 
 concurrency: build-image
 
