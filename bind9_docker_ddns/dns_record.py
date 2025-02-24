@@ -12,7 +12,7 @@ value_types = {"PTR", "CNAME", "A"}
 class DNSRecord:
     _bind_template = "{name}     IN  {record_type}       {value}"
 
-    def __init__(self, zone, name, record_type, value, ttl=60, source=docker_source_id):
+    def __init__(self, zone, name, record_type, value, ttl=60, source=None):
         self.zone = zone
         self.name = name
         self.record_type = record_type

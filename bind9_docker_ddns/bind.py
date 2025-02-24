@@ -183,7 +183,7 @@ class Bind:
                 if record_type in value_types:
                     for r in rdataset:
                         value = r.to_text()
-                        managed_record_values.append(DNSRecord(zone_name, str(name), record_type, value, source=None))
+                        managed_record_values.append(DNSRecord(zone_name, str(name), record_type, value))
 
             if is_managed_record:
                 managed_records[str(name)] = managed_record_values
