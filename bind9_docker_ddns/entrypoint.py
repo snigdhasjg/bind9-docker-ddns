@@ -13,18 +13,25 @@ def main():
     bind = Bind(config)
     container = Container(config)
 
+    managed_records = bind.list(config.zone)
+    LOG.info('Managed DNS entries: %s', managed_records)
+    if config.reverse_zone:
+        reverse_managed_records = bind.list(config.reverse_zone)
+        LOG.info('Managed reverse static DNS entries: %s', reverse_managed_records)
+    else:
+        reverse_managed_records = dict()
+
     for each_record in config.static_dns_records:
         bind.add(each_record)
 
-        arpa_record = each_record.arpa_record(config.reverse_zone)
-        if arpa_record:
-            bind.add(arpa_record)
+        if config.reverse_zone:
+            bind.add(each_record.arpa_record(config.reverse_zone))
 
     while True:
-        LOG.info('Managed DNS entries: %s', bind.list_docker_records(config.zone))
         container_list = container.list()
         LOG.info('Containers: %s', container_list)
         [bind.add(container) for container in container_list]
+
         time.sleep(60)
 
 

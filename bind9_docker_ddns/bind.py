@@ -11,7 +11,11 @@ import dns.update
 import dns.zone
 
 from bind9_docker_ddns.config import Config
-from bind9_docker_ddns.dns_record import DNSRecord, docker_source_id
+from bind9_docker_ddns.dns_record import DNSRecord
+from bind9_docker_ddns.dns_record import docker_source_id
+from bind9_docker_ddns.dns_record import static_source_id
+from bind9_docker_ddns.dns_record import value_types
+
 
 config_template = """
 acl "trusted" {
@@ -159,23 +163,39 @@ class Bind:
             f.write(self.current_ip)
         return tsig_key
 
-    def list_docker_records(self, zone_name):
+    def list(self, zone_name):
         zone = dns.zone.from_xfr(dns.query.xfr(self.current_ip, zone_name))
-        managed_records = []
-        docker_record = f'{self.config.client_name},{docker_source_id}'
+        managed_records = dict()
+        docker_record_id = f'{self.config.client_name},{docker_source_id}'
+        static_record_id = f'{self.config.client_name},{static_source_id}'
+
         for name, node in zone.nodes.items():
+            is_managed_record = False
+            managed_record_values = []
             for rdataset in node.rdatasets:
                 if rdataset.rdtype == dns.rdatatype.TXT:
-                    values = {s.decode() for rdata in rdataset for s in rdata.strings}
-                    if docker_record in values:
-                        managed_records.append(str(name))
+                    values = [r.decode() for rdata in rdataset for r in rdata.strings]
+                    if docker_record_id in values or static_record_id in values:
+                        is_managed_record = True
+                    continue
+
+                record_type = dns.rdatatype.to_text(rdataset.rdtype)
+                if record_type in value_types:
+                    for r in rdataset:
+                        value = r.to_text()
+                        managed_record_values.append(DNSRecord(zone_name, str(name), record_type, value, source=None))
+
+            if is_managed_record:
+                managed_records[str(name)] = managed_record_values
+
         return managed_records
 
     def add(self, record: DNSRecord):
         LOG.info('Adding record: %s', record)
         update = dns.update.Update(record.zone, keyring=self.keyring)
         update.add(record.name, record.ttl, record.record_type, record.value)
-        update.add(record.name, record.ttl, "TXT", f'{self.config.client_name},{record.source}')
+        owner_record = record.owner_record(f'{self.config.client_name},{record.source}')
+        update.add(owner_record.name, owner_record.ttl, owner_record.record_type, owner_record.value)
         dns.query.tcp(update, self.current_ip, timeout=2)
 
     def remove(self, zone, record_name):
