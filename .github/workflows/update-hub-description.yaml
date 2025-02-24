@@ -37,4 +37,4 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           repository: ${{ vars.DOCKERHUB_USERNAME }}/bind9-docker-ddns
           short-description: ${{ steps.read_files.outputs.short_description }}
-          readme-filepath: "README.md"
+          readme-filepath: "./README.md"
