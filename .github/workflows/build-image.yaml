@@ -45,7 +45,6 @@ jobs:
         name: Build bind9-docker-ddns
         uses: docker/build-push-action@v5
         with:
-          no-cache: true
           push: true
           tags: ${{ vars.DOCKERHUB_USERNAME }}/bind9-docker-ddns:latest,${{ vars.DOCKERHUB_USERNAME }}/bind9-docker-ddns:${{ steps.metadata.outputs.git_tag }}
           platforms: linux/amd64,linux/arm64/v8
