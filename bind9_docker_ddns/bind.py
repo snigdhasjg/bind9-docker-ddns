@@ -159,19 +159,6 @@ class Bind:
             f.write(self.current_ip)
         return tsig_key
 
-    def add(self, record: DNSRecord):
-        self._add(record)
-
-        arpa_record = self._arpa_record(record)
-        if arpa_record:
-            self._add(arpa_record)
-
-    def remove(self, zone, record_name):
-        LOG.info('removing record: %s, from zone: %s', record_name, zone)
-        update = dns.update.Update(zone, keyring=self.keyring)
-        update.delete(record_name)
-        dns.query.tcp(update, self.current_ip, timeout=2)
-
     def list_docker_records(self, zone_name):
         zone = dns.zone.from_xfr(dns.query.xfr(self.current_ip, zone_name))
         managed_records = []
@@ -184,26 +171,15 @@ class Bind:
                         managed_records.append(str(name))
         return managed_records
 
-    def _add(self, record: DNSRecord):
+    def add(self, record: DNSRecord):
         LOG.info('Adding record: %s', record)
         update = dns.update.Update(record.zone, keyring=self.keyring)
         update.add(record.name, record.ttl, record.record_type, record.value)
         update.add(record.name, record.ttl, "TXT", f'{self.config.client_name},{record.source}')
         dns.query.tcp(update, self.current_ip, timeout=2)
 
-    def _arpa_record(self, record: DNSRecord):
-        if not self.config.reverse_zone:
-            return
-
-        if record.record_type != 'A':
-            return
-
-        ip_reverse = '.'.join(reversed(record.value.split('.')))
-        reverse_zone_ip_section = self.config.reverse_zone.removesuffix('.in-addr.arpa')
-        ip_reverse_prefix = ip_reverse.removesuffix(f'.{reverse_zone_ip_section}')
-
-        if ip_reverse == ip_reverse_prefix:
-            LOG.debug("IP doesn't belong to ARPA zone")
-            return None
-
-        return DNSRecord(self.config.reverse_zone, ip_reverse_prefix, 'PTR', f'{record.name}.{record.zone}.', ttl=record.ttl, source=record.source)
+    def remove(self, zone, record_name):
+        LOG.info('removing record: %s, from zone: %s', record_name, zone)
+        update = dns.update.Update(zone, keyring=self.keyring)
+        update.delete(record_name)
+        dns.query.tcp(update, self.current_ip, timeout=2)

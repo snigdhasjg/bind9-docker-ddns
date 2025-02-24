@@ -4,7 +4,6 @@ import time
 from bind9_docker_ddns.bind import Bind
 from bind9_docker_ddns.config import Config
 from bind9_docker_ddns.container import Container
-from bind9_docker_ddns.dns_record import DNSRecord, static_source_id
 
 LOG = logging.getLogger(__name__)
 
@@ -16,6 +15,10 @@ def main():
 
     for each_record in config.static_dns_records:
         bind.add(each_record)
+
+        arpa_record = each_record.arpa_record(config.reverse_zone)
+        if arpa_record:
+            bind.add(arpa_record)
 
     while True:
         LOG.info('Managed DNS entries: %s', bind.list_docker_records(config.zone))
